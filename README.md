@@ -27,25 +27,26 @@ In the output, you'll find options to open the app in a
 
 ### Home Page
 
-![alt text](<./assets/WhatsApp Image 2025-03-26 at 16.06.12_85c763af.jpg>)
+<img src="./assets/WhatsApp Image 2025-03-26 at 16.06.12_85c763af.jpg" alt="Home Page" width="300" height="100">
 
 ### Movie Search
 
-![alt text](<./assets/WhatsApp Image 2025-03-26 at 16.06.12_33e0bdcc.jpg>)
+<img src="./assets/WhatsApp Image 2025-03-26 at 16.06.12_33e0bdcc.jpg" alt="Movie Search" width="300" height="100">
 
 ### Movie Details
 
-![alt text](<./assets/WhatsApp Image 2025-03-26 at 16.06.13_65a75862.jpg>)
+<img src="./assets/WhatsApp Image 2025-03-26 at 16.06.13_65a75862.jpg" alt="Movie Details" width="300" height="100">
 
 ### Added Bookmarks
 
-![alt text](<./assets/WhatsApp Image 2025-03-26 at 16.06.13_a8e7cb6b.jpg>)
+<img src="./assets/WhatsApp Image 2025-03-26 at 16.06.13_a8e7cb6b.jpg" alt="Added Bookmarks" width="300" height="100">
 
 ### Bookmarks
 
-![alt text](<./assets/WhatsApp Image 2025-03-26 at 16.06.13_75a2e5a3.jpg>)
+<img src="./assets/WhatsApp Image 2025-03-26 at 16.06.13_75a2e5a3.jpg" alt="Bookmarks" width="300" height="100">
 
 ### Remove Bookmarks
 
-![alt text](<./assets/WhatsApp Image 2025-03-26 at 16.06.14_2a5e2412.jpg>)
+<img src="./assets/WhatsApp Image 2025-03-26 at 16.06.14_2a5e2412.jpg" alt="Remove Bookmarks" width="300" height="100">
+
 
