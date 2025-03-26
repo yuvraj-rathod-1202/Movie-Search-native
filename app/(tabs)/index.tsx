@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -8,11 +8,14 @@ import {
   TouchableOpacity, 
   ActivityIndicator, 
   StyleSheet, 
-  Alert 
+  Alert,
+  ScrollView
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createStackNavigator } from '@react-navigation/stack';
+import { useFocusEffect } from '@react-navigation/native';
+import debounce from 'lodash.debounce';
 // Uncomment NavigationContainer if you are NOT using expo-router
 // import { NavigationContainer } from '@react-navigation/native';
 
@@ -27,6 +30,13 @@ function MovieSearchScreen({ navigation }) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
+  // Debounced search to limit API calls while typing
+  const debouncedSearch = useRef(
+    debounce(() => {
+      searchMovies(true);
+    }, 500)
+  ).current;
+
   const searchMovies = async (newSearch = false) => {
     if (!query.trim()) return;
     setLoading(true);
@@ -34,15 +44,19 @@ function MovieSearchScreen({ navigation }) {
       const response = await axios.get(
         `${API_URL}?apikey=${API_KEY}&s=${query}&page=${newSearch ? 1 : page}`
       );
-      if (response.data.Search) {
-        setMovies(newSearch ? response.data.Search : [...movies, ...response.data.Search]);
-        setHasMore(response.data.Search.length > 0);
+      if (response.data.Response === 'True' && response.data.Search) {
+        const newMovies = response.data.Search;
+        setMovies(newSearch ? newMovies : [...movies, ...newMovies]);
+        setHasMore(newMovies.length > 0);
         setPage(newSearch ? 2 : page + 1);
       } else {
+        // API returned an error message (could be "Movie not found!" or rate limit error)
         setMovies([]);
+        Alert.alert('Notice', response.data.Error || 'No movies found.');
       }
     } catch (error) {
       console.error('Error fetching movies:', error);
+      Alert.alert('Error', 'An error occurred while fetching movies.');
     }
     setLoading(false);
   };
@@ -82,13 +96,23 @@ function MovieSearchScreen({ navigation }) {
           placeholder="Search for movies..."
           placeholderTextColor="#ccc"
           value={query}
-          onChangeText={setQuery}
+          onChangeText={(text) => {
+            setQuery(text);
+            debouncedSearch();
+          }}
           onSubmitEditing={() => searchMovies(true)}
         />
-        <TouchableOpacity style={styles.searchButton} onPress={() => searchMovies(true)}>
+        <TouchableOpacity 
+          style={[styles.searchButton, { opacity: query.trim() ? 1 : 0.5 }]} 
+          onPress={() => searchMovies(true)}
+          disabled={!query.trim()}
+        >
           <Text style={styles.searchButtonText}>Search</Text>
         </TouchableOpacity>
       </View>
+      {(!loading && movies.length === 0 && query.trim()) && (
+        <Text style={styles.emptyText}>No movies found.</Text>
+      )}
       <FlatList
         data={movies}
         keyExtractor={(item) => item.imdbID}
@@ -108,7 +132,7 @@ function MovieDetailsScreen({ route }) {
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
 
-  // Load movie details
+  // Load movie details on mount
   useEffect(() => {
     axios.get(`${API_URL}?apikey=${API_KEY}&i=${imdbID}`)
       .then(response => {
@@ -121,6 +145,15 @@ function MovieDetailsScreen({ route }) {
         setLoading(false);
       });
   }, [imdbID]);
+
+  // Re-check bookmark status every time the screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (movie) {
+        checkIfBookmarked(movie);
+      }
+    }, [movie])
+  );
 
   // Check if current movie is bookmarked
   const checkIfBookmarked = async (movieData) => {
@@ -153,6 +186,7 @@ function MovieDetailsScreen({ route }) {
       setBookmarked(!bookmarked);
     } catch (error) {
       console.error('Error toggling bookmark:', error);
+      Alert.alert('Error', 'An error occurred while updating bookmarks.');
     }
   };
 
@@ -160,7 +194,7 @@ function MovieDetailsScreen({ route }) {
     return <ActivityIndicator size="large" color="#1E90FF" style={styles.detailsLoading} />;
 
   return (
-    <View style={styles.detailsContainer}>
+    <ScrollView style={styles.detailsContainer} contentContainerStyle={styles.detailsContentContainer}>
       {movie && (
         <>
           {movie.Poster !== 'N/A' ? (
@@ -182,16 +216,18 @@ function MovieDetailsScreen({ route }) {
           </TouchableOpacity>
         </>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 function BookmarksScreen({ navigation }) {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Load favorites from AsyncStorage
   const loadFavorites = async () => {
+    setRefreshing(true);
     try {
       const favoritesJSON = await AsyncStorage.getItem(FAVORITES_KEY);
       const favoritesData = favoritesJSON ? JSON.parse(favoritesJSON) : [];
@@ -199,6 +235,7 @@ function BookmarksScreen({ navigation }) {
     } catch (error) {
       console.error('Error loading favorites:', error);
     }
+    setRefreshing(false);
     setLoading(false);
   };
 
@@ -234,6 +271,8 @@ function BookmarksScreen({ navigation }) {
         keyExtractor={(item) => item.imdbID}
         renderItem={renderFavoriteItem}
         contentContainerStyle={styles.listContent}
+        refreshing={refreshing}
+        onRefresh={loadFavorites}
       />
     </View>
   );
@@ -343,10 +382,19 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 20,
   },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#555',
+    fontSize: 16,
+  },
   detailsContainer: {
     flex: 1,
-    padding: 15,
     backgroundColor: '#f5f5f5',
+  },
+  detailsContentContainer: {
+    padding: 15,
+    alignItems: 'center'
   },
   detailsPoster: {
     width: '100%',
